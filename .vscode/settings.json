@@ -1,0 +1,6 @@
+{
+    "tlaplus.java.home": "",
+    "tlaplus.tlc.modelChecker.createOutFiles": false,
+    "tlaplus.tlc.modelChecker.options": "-workers auto -checkpoint 0 -metadir ../build/states/${specName}",
+    "tlaplus.java.options": "-XX:+UseParallelGC"
+}
