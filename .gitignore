@@ -1,5 +1,6 @@
 # TLC outputs
 *_TTrace_*.tla
 *_TTrace_*.bin
+*_trace_*.tlc
 states/
 build/

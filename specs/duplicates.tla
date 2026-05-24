@@ -1,5 +1,5 @@
 ---- MODULE duplicates ----
-EXTENDS Integers, Sequences, TLC
+EXTENDS Integers, Sequences, TLC, FiniteSets
 
 S == 1 .. 10
 
@@ -9,6 +9,32 @@ variables
   index = 1;
   seen = {};
   is_unique = TRUE;
+
+define
+  TypeInvariant ==
+  /\ is_unique \in BOOLEAN
+  /\ seen \subseteq S
+  /\ index \in 1..Len(seq)+1
+
+  Contains(s, elem) ==
+    \E i \in 1..Len(s):
+      s[i] = elem
+
+  Range(s) == {seq[i]: i \in 1..Len(s)}
+
+  IsUnique(s) ==
+    \A i, j \in 1..Len(s):
+      i # j => s[i] # s[j]
+  \* IsUnique(s) ==
+  \*   \A i \in 1..Len(s):
+  \*     \A j \in (1..Len(s)) \ {i}:
+  \*       s[i] # s[j]
+  \* IsUnique(s) == Len(s) = Cardinality(Range(s))
+  \* IsUnique(s) ==
+  \*   \A i \in 1..Len(seq):
+  \*     ~Contains(SubSeq(s, 1, i-1), s[i])
+  IsCorrect == pc = "Done" => is_unique = IsUnique(seq)
+end define;
 
 begin
   Iterate:
@@ -21,8 +47,34 @@ begin
       index := index + 1;
     end while;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "e8cc16ef" /\ chksum(tla) = "ee8efe86")
+\* BEGIN TRANSLATION (chksum(pcal) = "3c6dc7dc" /\ chksum(tla) = "8ccd7166")
 VARIABLES pc, seq, index, seen, is_unique
+
+(* define statement *)
+TypeInvariant ==
+/\ is_unique \in BOOLEAN
+/\ seen \subseteq S
+/\ index \in 1..Len(seq)+1
+
+Contains(s, elem) ==
+  \E i \in 1..Len(s):
+    s[i] = elem
+
+Range(s) == {seq[i]: i \in 1..Len(s)}
+
+IsUnique(s) ==
+  \A i, j \in 1..Len(s):
+    i # j => s[i] # s[j]
+
+
+
+
+
+
+
+
+IsCorrect == pc = "Done" => is_unique = IsUnique(seq)
+
 
 vars == << pc, seq, index, seen, is_unique >>
 

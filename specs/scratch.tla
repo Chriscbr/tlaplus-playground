@@ -16,6 +16,9 @@ Squares == {x * x: x \in 1 .. 4}
 \* Filter
 Evens == {x \in 1 .. 4: x % 2 = 0}
 
+\* Range
+Range(seq) == {seq[i]: i \in 1 .. Len(seq)}
+
 ToClock(seconds) ==
   LET seconds_per_day == 86400
   IN CHOOSE x \in ClockType: ToSeconds(x) = seconds % seconds_per_day
@@ -26,6 +29,10 @@ ToClock2(seconds) == LET h == seconds \div 3600
                          m_left == h_left % 60
                          s == m_left IN << h, m, s >>
 
-Eval == ToClock(86400)
+IsComposite(num) == \E m, n \in 2 .. num: m * n = num
+
+IsUnique(s) == Len(s) = Cardinality(Range(s))
+
+Eval == IsUnique(<< 1, 1, 1, 1 >>)
 ASSUME PrintT(Eval)
 ====
