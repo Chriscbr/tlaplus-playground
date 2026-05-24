@@ -1,11 +1,15 @@
 ---- MODULE duplicates ----
 EXTENDS Integers, Sequences, TLC, FiniteSets
 
-S == 1 .. 10
+CONSTANT DEBUG
+ASSUME DEBUG \in BOOLEAN
+
+CONSTANT SMax
+ASSUME SMax >= 4
+S == 1 .. SMax
 
 (* --algorithm dup
-variables
-  seq \in S \X S \X S \X S;
+  variable seq \in IF DEBUG THEN {<<1, 2, 3, 4>>} ELSE S \X S \X S \X S;
   index = 1;
   seen = {};
   is_unique = TRUE;
@@ -16,15 +20,16 @@ define
   /\ seen \subseteq S
   /\ index \in 1..Len(seq)+1
 
-  Contains(s, elem) ==
-    \E i \in 1..Len(s):
-      s[i] = elem
-
-  Range(s) == {seq[i]: i \in 1..Len(s)}
-
   IsUnique(s) ==
     \A i, j \in 1..Len(s):
-      i # j => s[i] # s[j]
+      i # j => seq[i] # seq[j]
+  
+  \* Contains(s, elem) ==
+  \*   \E i \in 1..Len(s):
+  \*     s[i] = elem
+
+  \* Range(s) == {seq[i]: i \in 1..Len(s)}
+
   \* IsUnique(s) ==
   \*   \A i \in 1..Len(s):
   \*     \A j \in (1..Len(s)) \ {i}:
@@ -47,7 +52,7 @@ begin
       index := index + 1;
     end while;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "3c6dc7dc" /\ chksum(tla) = "8ccd7166")
+\* BEGIN TRANSLATION (chksum(pcal) = "bbdac475" /\ chksum(tla) = "cf6ece30")
 VARIABLES pc, seq, index, seen, is_unique
 
 (* define statement *)
@@ -56,15 +61,16 @@ TypeInvariant ==
 /\ seen \subseteq S
 /\ index \in 1..Len(seq)+1
 
-Contains(s, elem) ==
-  \E i \in 1..Len(s):
-    s[i] = elem
-
-Range(s) == {seq[i]: i \in 1..Len(s)}
-
 IsUnique(s) ==
   \A i, j \in 1..Len(s):
-    i # j => s[i] # s[j]
+    i # j => seq[i] # seq[j]
+
+
+
+
+
+
+
 
 
 
@@ -79,7 +85,7 @@ IsCorrect == pc = "Done" => is_unique = IsUnique(seq)
 vars == << pc, seq, index, seen, is_unique >>
 
 Init == (* Global variables *)
-        /\ seq \in S \X S \X S \X S
+        /\ seq \in IF DEBUG THEN {<<1, 2, 3, 4>>} ELSE S \X S \X S \X S
         /\ index = 1
         /\ seen = {}
         /\ is_unique = TRUE
