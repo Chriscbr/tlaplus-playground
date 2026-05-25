@@ -59,6 +59,9 @@ Sort(seq) ==
          CountMatching(seq, seq[i]) = CountMatching(sorted, seq[i])
     /\ IsSorted(sorted)
 
+\* SeqMap(f, seq) == [i \in DOMAIN seq |-> f[seq[i]]]
+SeqMap(Op(_), seq) == [i \in DOMAIN seq |-> Op(seq[i])]
+
 Eval == Sort(<< 8, 2, 7, 4, 3, 1, 3 >>)
 ASSUME PrintT(Eval)
 ====
