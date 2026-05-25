@@ -2,5 +2,19 @@
     "tlaplus.java.home": "",
     "tlaplus.tlc.modelChecker.createOutFiles": false,
     "tlaplus.tlc.modelChecker.options": "-workers auto -checkpoint 0 -metadir ../build/states/${specName}",
-    "tlaplus.java.options": "-XX:+UseParallelGC"
+    "tlaplus.java.options": "-XX:+UseParallelGC",
+    "[tlaplus]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2,
+        "editor.formatOnSave": false
+    },
+    "[tlaplus_cfg]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2,
+    },
+    "triggerTaskOnSave.tasks": {
+        "TLA: translate current file": [
+            "specs/*.tla",
+        ]
+    },
 }
