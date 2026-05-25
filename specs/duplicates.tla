@@ -1,15 +1,15 @@
 ---- MODULE duplicates ----
 EXTENDS Integers, Sequences, TLC, FiniteSets
 
-CONSTANT DEBUG
-ASSUME DEBUG \in BOOLEAN
-
-CONSTANT SMax
-ASSUME SMax >= 4
-S == 1 .. SMax
+CONSTANT Size
+ASSUME Size > 0
+S == 1 .. 10
+ASSUME Cardinality(S) >= 4
 
 (* --algorithm dup
-  variable seq \in IF DEBUG THEN {<<1, 2, 3, 4>>} ELSE S \X S \X S \X S;
+variable
+  n \in 1..Size;
+  seq \in [1..n -> S];
   index = 1;
   seen = {};
   is_unique = TRUE;
@@ -23,7 +23,7 @@ define
   IsUnique(s) ==
     \A i, j \in 1..Len(s):
       i # j => seq[i] # seq[j]
-  
+
   \* Contains(s, elem) ==
   \*   \E i \in 1..Len(s):
   \*     s[i] = elem
@@ -52,8 +52,8 @@ begin
       index := index + 1;
     end while;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "bbdac475" /\ chksum(tla) = "cf6ece30")
-VARIABLES pc, seq, index, seen, is_unique
+\* BEGIN TRANSLATION (chksum(pcal) = "75fad6e3" /\ chksum(tla) = "2ddf4ca6")
+VARIABLES pc, n, seq, index, seen, is_unique
 
 (* define statement *)
 TypeInvariant ==
@@ -82,10 +82,11 @@ IsUnique(s) ==
 IsCorrect == pc = "Done" => is_unique = IsUnique(seq)
 
 
-vars == << pc, seq, index, seen, is_unique >>
+vars == << pc, n, seq, index, seen, is_unique >>
 
 Init == (* Global variables *)
-        /\ seq \in IF DEBUG THEN {<<1, 2, 3, 4>>} ELSE S \X S \X S \X S
+        /\ n \in 1..Size
+        /\ seq \in [1..n -> S]
         /\ index = 1
         /\ seen = {}
         /\ is_unique = TRUE
@@ -102,7 +103,7 @@ Iterate == /\ pc = "Iterate"
                       /\ pc' = "Iterate"
                  ELSE /\ pc' = "Done"
                       /\ UNCHANGED << index, seen, is_unique >>
-           /\ seq' = seq
+           /\ UNCHANGED << n, seq >>
 
 (* Allow infinite stuttering to prevent deadlock on termination. *)
 Terminating == pc = "Done" /\ UNCHANGED vars
