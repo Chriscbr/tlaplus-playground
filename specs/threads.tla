@@ -12,14 +12,11 @@ variables
   lock = NULL;
 
 define
-  AllDone == 
-    \A t \in Threads: pc[t] = "Done"
-
-  Correct ==
-      AllDone => counter = NumThreads
+  Liveness ==
+    <>[](counter = NumThreads)
 end define;  
 
-process thread \in Threads
+fair process thread \in Threads
 variables tmp = 0;
 begin
   GetLock:
@@ -34,15 +31,12 @@ begin
     lock := NULL;
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "98746c9b" /\ chksum(tla) = "83f973b1")
+\* BEGIN TRANSLATION (chksum(pcal) = "d6ae7de2" /\ chksum(tla) = "acb2b793")
 VARIABLES pc, counter, lock
 
 (* define statement *)
-AllDone ==
-  \A t \in Threads: pc[t] = "Done"
-
-Correct ==
-    AllDone => counter = NumThreads
+Liveness ==
+  <>[](counter = NumThreads)
 
 VARIABLE tmp
 
@@ -75,7 +69,7 @@ IncCounter(self) == /\ pc[self] = "IncCounter"
 
 ReleaseLock(self) == /\ pc[self] = "ReleaseLock"
                      /\ Assert(lock = self, 
-                               "Failure of assertion at line 33, column 5.")
+                               "Failure of assertion at line 30, column 5.")
                      /\ lock' = NULL
                      /\ pc' = [pc EXCEPT ![self] = "Done"]
                      /\ UNCHANGED << counter, tmp >>
@@ -90,7 +84,8 @@ Terminating == /\ \A self \in ProcSet: pc[self] = "Done"
 Next == (\E self \in Threads: thread(self))
            \/ Terminating
 
-Spec == Init /\ [][Next]_vars
+Spec == /\ Init /\ [][Next]_vars
+        /\ \A self \in Threads : WF_vars(thread(self))
 
 Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
