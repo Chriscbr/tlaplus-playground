@@ -32,6 +32,7 @@ graph:
 		-deadlock \
 		-dump dot $(GRAPH_DIR)/$(SPEC).dot \
 		$(TLA)
+	dot -Tpng $(GRAPH_DIR)/$(SPEC).dot -o $(GRAPH_DIR)/$(SPEC).png
 
 clean:
 	rm -rf build

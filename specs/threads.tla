@@ -14,6 +14,11 @@ variables
 define
   Liveness ==
     <>[](counter = NumThreads)
+  CounterOnlyIncreases ==
+    [][counter' >= counter]_counter
+  BecomesNull(x) == x' = NULL
+  LockCantBeStolen ==
+    [][lock # NULL => BecomesNull(lock)]_lock
 end define;  
 
 fair process thread \in Threads
@@ -31,12 +36,17 @@ begin
     lock := NULL;
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "d6ae7de2" /\ chksum(tla) = "acb2b793")
+\* BEGIN TRANSLATION (chksum(pcal) = "4d595f90" /\ chksum(tla) = "52d896d0")
 VARIABLES pc, counter, lock
 
 (* define statement *)
 Liveness ==
   <>[](counter = NumThreads)
+CounterOnlyIncreases ==
+  [][counter' >= counter]_counter
+BecomesNull(x) == x' = NULL
+LockCantBeStolen ==
+  [][lock # NULL => BecomesNull(lock)]_lock
 
 VARIABLE tmp
 
@@ -69,7 +79,7 @@ IncCounter(self) == /\ pc[self] = "IncCounter"
 
 ReleaseLock(self) == /\ pc[self] = "ReleaseLock"
                      /\ Assert(lock = self, 
-                               "Failure of assertion at line 30, column 5.")
+                               "Failure of assertion at line 35, column 5.")
                      /\ lock' = NULL
                      /\ pc' = [pc EXCEPT ![self] = "Done"]
                      /\ UNCHANGED << counter, tmp >>
