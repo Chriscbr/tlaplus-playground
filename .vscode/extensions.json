@@ -1,5 +1,6 @@
 {
     "recommendations": [
-        "gruntfuggly.triggertaskonsave"
+        "gruntfuggly.triggertaskonsave",
+        "tlaplus.vscode-ide"
     ]
 }
