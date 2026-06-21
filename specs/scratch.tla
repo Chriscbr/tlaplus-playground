@@ -62,6 +62,12 @@ Sort(seq) ==
 \* SeqMap(f, seq) == [i \in DOMAIN seq |-> f[seq[i]]]
 SeqMap(Op(_), seq) == [i \in DOMAIN seq |-> Op(seq[i])]
 
-Eval == Sort(<< 8, 2, 7, 4, 3, 1, 3 >>)
+CommonFactors(a, b) ==
+  {x \in 1..100 : a % x = 0 /\ b % x = 0}
+
+GCD(a, b) ==
+  CHOOSE x \in CommonFactors(a, b): \A y \in CommonFactors(a, b): x >= y
+
+Eval == GCD(4, 8)
 ASSUME PrintT(Eval)
 ====
