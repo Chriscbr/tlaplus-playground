@@ -5,3 +5,7 @@
 *_trace_*.tlc
 states/
 build/
+
+# TLA toolbox artifacts
+*.pdf
+**/*.toolbox/**
