@@ -2,17 +2,17 @@
 EXTENDS TLC, Integers
 CONSTANT NULL
 
-Threads == 1..2
+Threads == {0, 1}
 
 (* --algorithm threads
 variables
   flag = [t \in Threads |-> FALSE];
-  victim = 1;
+  turn = 1;
 
 define
   TypeVariant ==
-    /\ flag \in [1..2 -> BOOLEAN]
-    /\ victim \in Threads
+    /\ flag \in [Threads -> BOOLEAN]
+    /\ turn \in Threads
   BothHoldLock(t1, t2) ==
     pc[t1] = "CriticalSection" /\ pc[t2] = "CriticalSection"
   MutualExclusion ==
@@ -35,10 +35,10 @@ begin
   AcquireLock1:
     flag[self] := TRUE;
   AcquireLock2:
-    victim := self;
+    turn := 1 - self;
   AcquireLock3:
-    \* wait until either flag[j] is false or victim == j
-    await flag[3 - self] = FALSE \/ victim # self;
+    \* wait until either flag[j] is false or turn == self
+    await flag[1 - self] = FALSE \/ turn = self;
   CriticalSection:
     skip;
   ReleaseLock:
@@ -46,13 +46,13 @@ begin
     goto AcquireLock1;
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "b0040ea3" /\ chksum(tla) = "54096c5b")
-VARIABLES pc, flag, victim
+\* BEGIN TRANSLATION (chksum(pcal) = "63329a59" /\ chksum(tla) = "9a58dd4f")
+VARIABLES pc, flag, turn
 
 (* define statement *)
 TypeVariant ==
-  /\ flag \in [1..2 -> BOOLEAN]
-  /\ victim \in Threads
+  /\ flag \in [Threads -> BOOLEAN]
+  /\ turn \in Threads
 BothHoldLock(t1, t2) ==
   pc[t1] = "CriticalSection" /\ pc[t2] = "CriticalSection"
 MutualExclusion ==
@@ -65,39 +65,39 @@ Liveness ==
     <>(pc[t] = "CriticalSection")
 
 
-vars == << pc, flag, victim >>
+vars == << pc, flag, turn >>
 
 ProcSet == (Threads)
 
 Init == (* Global variables *)
         /\ flag = [t \in Threads |-> FALSE]
-        /\ victim = 1
+        /\ turn = 1
         /\ pc = [self \in ProcSet |-> "AcquireLock1"]
 
 AcquireLock1(self) == /\ pc[self] = "AcquireLock1"
                       /\ flag' = [flag EXCEPT ![self] = TRUE]
                       /\ pc' = [pc EXCEPT ![self] = "AcquireLock2"]
-                      /\ UNCHANGED victim
+                      /\ turn' = turn
 
 AcquireLock2(self) == /\ pc[self] = "AcquireLock2"
-                      /\ victim' = self
+                      /\ turn' = 1 - self
                       /\ pc' = [pc EXCEPT ![self] = "AcquireLock3"]
                       /\ flag' = flag
 
 AcquireLock3(self) == /\ pc[self] = "AcquireLock3"
-                      /\ flag[3 - self] = FALSE \/ victim # self
+                      /\ flag[1 - self] = FALSE \/ turn = self
                       /\ pc' = [pc EXCEPT ![self] = "CriticalSection"]
-                      /\ UNCHANGED << flag, victim >>
+                      /\ UNCHANGED << flag, turn >>
 
 CriticalSection(self) == /\ pc[self] = "CriticalSection"
                          /\ TRUE
                          /\ pc' = [pc EXCEPT ![self] = "ReleaseLock"]
-                         /\ UNCHANGED << flag, victim >>
+                         /\ UNCHANGED << flag, turn >>
 
 ReleaseLock(self) == /\ pc[self] = "ReleaseLock"
                      /\ flag' = [flag EXCEPT ![self] = FALSE]
                      /\ pc' = [pc EXCEPT ![self] = "AcquireLock1"]
-                     /\ UNCHANGED victim
+                     /\ turn' = turn
 
 thread(self) == AcquireLock1(self) \/ AcquireLock2(self)
                    \/ AcquireLock3(self) \/ CriticalSection(self)
