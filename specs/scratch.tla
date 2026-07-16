@@ -68,6 +68,10 @@ CommonFactors(a, b) ==
 GCD(a, b) ==
   CHOOSE x \in CommonFactors(a, b): \A y \in CommonFactors(a, b): x >= y
 
-Eval == GCD(4, 8)
+Remove(i, seq) ==
+  [j \in 1..(Len(seq)-1) |-> IF j < i THEN seq[j]
+                                      ELSE seq[j+1]]
+
+Eval == (1..3) \X {"a", "b"}
 ASSUME PrintT(Eval)
 ====
