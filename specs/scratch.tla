@@ -72,6 +72,14 @@ Remove(i, seq) ==
   [j \in 1..(Len(seq)-1) |-> IF j < i THEN seq[j]
                                       ELSE seq[j+1]]
 
-Eval == (1..3) \X {"a", "b"}
+RECURSIVE RemoveX(_)
+RemoveX(seq) ==
+  IF seq = << >>
+    THEN << >>
+    ELSE IF Head(seq) = "X"
+          THEN RemoveX(Tail(seq))
+          ELSE << Head(seq) >> \o RemoveX(Tail(seq))
+
+Eval == RemoveX(<< "X", "Tom", "Dick", "X", "Harry" >>)
 ASSUME PrintT(Eval)
 ====
