@@ -3,22 +3,23 @@ EXTENDS Integers, Sequences
 
 CONSTANT Schedules
 CONSTANT MaxScheduleVersion
-CONSTANT MaxLDA
+CONSTANT MaxTime
 CONSTANT MaxEnqueued
 
-VARIABLES pgState, cassState, execState, execWarmedUp, enqueued
-vars == << pgState, cassState, execState, execWarmedUp, enqueued >>
+VARIABLES clock, pgState, cassState, execState, execWarmedUp, enqueued
+vars == << clock, pgState, cassState, execState, execWarmedUp, enqueued >>
 
 \* ScheduleState models schedule information stored in PG - does not include its LDA (last-due-at)
 \* A schedule with version 0 represents a schedule that does not exist yet.
 \* Once a schedule is deleted, it cannot be re-created.
 ScheduleState == [version: 0..MaxScheduleVersion, deleted: BOOLEAN]
 \* ScheduleExecState models schedule information stored within C* and within executors
-ScheduleExecState == [version: 0..MaxScheduleVersion, deleted: BOOLEAN, lda: 0..MaxLDA]
+ScheduleExecState == [version: 0..MaxScheduleVersion, deleted: BOOLEAN, lda: 0..MaxTime]
 \* EnqueuedSchedule models schedule information pushed onto a queue
-EnqueuedSchedule == [schedule: Schedules, version: 0..MaxScheduleVersion, lda: 0..MaxLDA]
+EnqueuedSchedule == [schedule: Schedules, version: 0..MaxScheduleVersion, lda: 0..MaxTime]
 
 TypeOK ==
+  /\ clock \in 1..MaxTime
   /\ pgState \in [Schedules -> ScheduleState]
   /\ cassState \in [Schedules -> ScheduleExecState]
   /\ execState \in [Schedules -> ScheduleExecState]
@@ -30,6 +31,7 @@ CassStateInit == [s \in Schedules |-> [version |-> 0, deleted |-> FALSE, lda |->
 ExecStateInit == [s \in Schedules |-> [version |-> 0, deleted |-> FALSE, lda |-> 0]]
 
 Init ==
+  /\ clock = 1
   /\ pgState = PgStateInit
   /\ cassState = CassStateInit
   /\ execState = ExecStateInit
@@ -73,27 +75,27 @@ CassLDAsAreMonotonic ==
 AddSchedule(s) ==
   /\ pgState[s].version = 0 \* schedule must not exist
   /\ pgState' = [pgState EXCEPT ![s].version = 1]
-  /\ UNCHANGED << cassState, execState, execWarmedUp, enqueued >>
+  /\ UNCHANGED << clock, cassState, execState, execWarmedUp, enqueued >>
 
 UpdateSchedule(s) ==
   /\ pgState[s].version > 0 \* schedule must exist
   /\ pgState[s].version < MaxScheduleVersion \* bound our model's state space
   /\ pgState[s].deleted = FALSE \* schedule hasn't been deleted yet
   /\ pgState' = [pgState EXCEPT ![s].version = pgState[s].version + 1]
-  /\ UNCHANGED << cassState, execState, execWarmedUp, enqueued >>
+  /\ UNCHANGED << clock, cassState, execState, execWarmedUp, enqueued >>
 
 DeleteSchedule(s) ==
   /\ pgState[s].version > 0 \* schedule must exist
   /\ pgState[s].deleted = FALSE \* schedule hasn't been deleted yet
   /\ pgState' = [pgState EXCEPT ![s].deleted = TRUE]
-  /\ UNCHANGED << cassState, execState, execWarmedUp, enqueued >>
+  /\ UNCHANGED << clock, cassState, execState, execWarmedUp, enqueued >>
 
 \* Replicating a schedule copies a schedule's data from postgres to cassandra,
 \* including whether it has been deleted.
 ReplicateSchedule(s) ==
   /\ cassState' = [cassState EXCEPT ![s].version = pgState[s].version,
                                     ![s].deleted = pgState[s].deleted]
-  /\ UNCHANGED << pgState, execState, execWarmedUp, enqueued >>
+  /\ UNCHANGED << clock, pgState, execState, execWarmedUp, enqueued >>
 
 \* Refreshing a schedule copies a schedule's data from cassandra to the executor's in-memory state.
 \* If the LDA is older, we keep the existing execState (in-memory) LDA.
@@ -104,21 +106,21 @@ ExecutorRefreshSchedule(s) ==
                                                THEN cassState[s].lda
                                                ELSE execState[s].lda]
   /\ execWarmedUp' = TRUE
-  /\ UNCHANGED << pgState, cassState, enqueued >>
+  /\ UNCHANGED << clock, pgState, cassState, enqueued >>
 
-\* Evaluating a schedule results in the schedule's LDA (last-due-at) getting bumped,
+\* Evaluating a schedule results in the schedule's LDA (last-due-at) set to the current time,
 \* and the schedule getting enqueued.
 ExecutorEvaluateSchedule(s) ==
   /\ execWarmedUp = TRUE \* executor must have ran at least one refresh
   /\ execState[s].version > 0 \* schedule must exist
   /\ execState[s].deleted = FALSE \* schedule hasn't been deleted yet
-  /\ execState[s].lda < MaxLDA \* bound our model's state space
+  /\ execState[s].lda < clock \* wait for time to pass
   /\ Len(enqueued) < MaxEnqueued \* bound our model's state space
-  /\ execState' = [execState EXCEPT ![s].lda = execState[s].lda + 1]
+  /\ execState' = [execState EXCEPT ![s].lda = clock]
   /\ enqueued' = Append(enqueued, [schedule |-> s,
                                    version |-> execState[s].version,
-                                   lda |-> execState[s].lda])
-  /\ UNCHANGED << pgState, cassState, execWarmedUp >>
+                                   lda |-> clock])
+  /\ UNCHANGED << clock, pgState, cassState, execWarmedUp >>
 
 \* Committing a schedule persist's the schedule's LDA (last-due-at) from the executor to cassandra.
 \* It does not change the schedule's version or deleted state.
@@ -126,13 +128,18 @@ ExecutorCommitSchedule(s) ==
   /\ execState[s].version > 0 \* schedule must exist
   /\ execState[s].deleted = FALSE \* schedule hasn't been deleted yet
   /\ cassState' = [cassState EXCEPT ![s].lda = execState[s].lda]
-  /\ UNCHANGED << pgState, execState, execWarmedUp, enqueued >>
+  /\ UNCHANGED << clock, pgState, execState, execWarmedUp, enqueued >>
+
+AdvanceTime ==
+  /\ clock < MaxTime \* bound our model's state space
+  /\ clock' = clock + 1
+  /\ UNCHANGED << pgState, cassState, execState, execWarmedUp, enqueued >>
 
 \* When an executor restarts, its internal state is reset
 ExecutorRestart ==
   /\ execState' = ExecStateInit
   /\ execWarmedUp' = FALSE
-  /\ UNCHANGED << pgState, cassState, enqueued >>
+  /\ UNCHANGED << clock, pgState, cassState, enqueued >>
 
 Next ==
   \/ \E s \in Schedules :
@@ -143,6 +150,7 @@ Next ==
       \/ ExecutorRefreshSchedule(s)
       \/ ExecutorEvaluateSchedule(s)
       \/ ExecutorCommitSchedule(s)
+  \/ AdvanceTime
   \/ ExecutorRestart
 
 Spec == Init /\ [][Next]_vars /\ WF_vars(Next)
