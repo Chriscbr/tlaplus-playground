@@ -49,6 +49,17 @@ NoPhantomSchedules ==
   /\ \forall s \in Schedules : ~(cassState[s].version = 0 /\ cassState[s].deleted = TRUE)
   /\ \forall s \in Schedules : ~(execState[s].version = 0 /\ execState[s].deleted = TRUE)
 
+\* An evaluated LDA can't be ahead of the current clock time.
+NoTimeTravel ==
+  /\ \forall s \in Schedules: execState[s].lda <= clock
+  /\ \forall s \in Schedules: cassState[s].lda <= clock
+
+\* Once a schedule is deleted, it's never un-deleted
+DeletionIsMonotonic ==
+  /\ [][\forall s \in Schedules: pgState[s].deleted => pgState[s]'.deleted]_pgState
+  /\ [][\forall s \in Schedules: cassState[s].deleted => cassState[s]'.deleted]_cassState
+  /\ [][\forall s \in Schedules: execState[s]'.version = 0 \/ (execState[s].deleted => execState[s]'.deleted)]_execState
+
 VersionsAreMonotonic ==
   \* schedule versions never decrease in PG
   /\ [][\forall s \in Schedules: pgState[s].version <= pgState[s]'.version]_pgState
@@ -56,17 +67,26 @@ VersionsAreMonotonic ==
   /\ [][\forall s \in Schedules: cassState[s].version <= cassState[s]'.version]_cassState
   \* schedule versions never decrease in Executor (unless it restarts)
   /\ [][\forall s \in Schedules: execState[s]'.version = 0 \/ execState[s].version <= execState[s]'.version]_execState
-  \* schedule versions never decrease in Enqueues
+  \* schedule versions never decrease in enqueued schedules
   /\ \forall i, j \in DOMAIN enqueued:
         (i < j /\ enqueued[i].schedule = enqueued[j].schedule) =>
           enqueued[i].version <= enqueued[j].version
 
+\* When a queue's messages are read in order, it shouldn't be possible to see
+\* a schedule due for time T and somewhere later that same schedule due for
+\* at a time before T.
 EnqueuesAreMonotonic ==
   \forall i, j \in DOMAIN enqueued:
     (i < j /\ enqueued[i].schedule = enqueued[j].schedule) => (enqueued[i].lda =< enqueued[j].lda)
 
+\* Once a schedule's evaluated due time is committed to Cassandra, we should
+\* never see that timestamp decrease.
 CassLDAsAreMonotonic ==
   [][\forall s \in Schedules : cassState[s].lda =< cassState[s]'.lda]_cassState
+
+\* The only way execWarmUp should be false is if the executor was reset
+ExecWarmUpCheck ==
+  ~execWarmedUp => execState = ExecStateInit
 
 \***********
 \* Actions *
