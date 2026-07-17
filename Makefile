@@ -16,7 +16,11 @@ GRAPH_DIR := $(BUILD)/graphs
 .PHONY: check translate graph clean
 
 translate:
-	$(PCAL) $(TLA)
+	@if grep -qE -- '--(fair )?algorithm' $(TLA); then \
+		$(PCAL) $(TLA); \
+	else \
+		echo "No PlusCal algorithm block in $(TLA), skipping translation."; \
+	fi
 
 check:
 	mkdir -p $(STATE_DIR)
